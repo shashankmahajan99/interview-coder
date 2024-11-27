@@ -4,10 +4,19 @@ import fs from "node:fs"
 import { v4 as uuidv4 } from "uuid"
 import screenshot from "screenshot-desktop"
 import FormData from "form-data"
+import Store from "electron-store"
+import { Session } from "@supabase/supabase-js"
+
 import axios from "axios"
+
+interface StoreSchema {
+  session?: Session
+}
 
 class AppState {
   private static instance: AppState | null = null
+
+  private store: Store<StoreSchema>
 
   // Window management
   private mainWindow: BrowserWindow | null = null
@@ -49,6 +58,7 @@ class AppState {
   private currentExtraProcessingAbortController: AbortController | null = null
 
   private constructor() {
+    this.store = new Store<StoreSchema>()
     // Initialize directories
     this.screenshotDir = path.join(app.getPath("userData"), "screenshots")
     this.extraScreenshotDir = path.join(
@@ -125,6 +135,7 @@ class AppState {
       this.mainWindow.setAlwaysOnTop(true, "floating")
     }
 
+    this.mainWindow.webContents.openDevTools()
     const isDev = process.env.NODE_ENV === "development"
     const startUrl = isDev
       ? "http://localhost:5173"
@@ -471,7 +482,7 @@ class AppState {
 
         // Second API call - generate solutions
         if (this.mainWindow) {
-          const solutionsResult = await this.generateSolutionsHelper()
+          const solutionsResult = await this.generateSolutionsHelper(signal) // Pass the signal here
           if (solutionsResult.success) {
             this.mainWindow.webContents.send(
               this.PROCESSING_EVENTS.INITIAL_SOLUTION_GENERATED,
@@ -505,7 +516,7 @@ class AppState {
   }
 
   // Implement generateSolutionsHelper
-  private async generateSolutionsHelper() {
+  private async generateSolutionsHelper(signal?: AbortSignal) {
     try {
       if (!this.problemInfo) {
         throw new Error("No problem info available")
@@ -518,7 +529,8 @@ class AppState {
           {
             timeout: 300000,
             maxContentLength: Infinity,
-            maxBodyLength: Infinity
+            maxBodyLength: Infinity,
+            signal
           }
         )
 
@@ -624,6 +636,19 @@ class AppState {
 
   // IPC Handlers setup
   private initializeIpcHandlers(): void {
+    ipcMain.handle("store-session", (_event, session: Session) => {
+      this.store.set("session", session) // Save session in the store
+    })
+    // Retrieve session from electron-store
+    ipcMain.handle("get-session", () => {
+      return this.store.get("session") // Get the stored session
+    })
+
+    // Clear session in electron-store
+    ipcMain.handle("clear-session", () => {
+      this.store.delete("session") // Remove the session from the store
+    })
+
     ipcMain.handle("update-content-height", async (event, height: number) => {
       if (this.mainWindow && !this.mainWindow.isDestroyed()) {
         const [width] = this.mainWindow.getSize()
@@ -688,6 +713,40 @@ class AppState {
         console.error("Error resetting queues:", error)
         return { success: false, error: error.message }
       }
+    })
+    ipcMain.handle("open-auth-window", async (event, authUrl: string) => {
+      const authWindow = new BrowserWindow({
+        width: 800,
+        height: 600,
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true
+        }
+      })
+
+      authWindow.loadURL(authUrl)
+
+      return new Promise((resolve) => {
+        // Watch for redirects
+        authWindow.webContents.on("will-redirect", (event, url) => {
+          if (url.includes("access_token")) {
+            authWindow.close()
+            resolve(true)
+          }
+        })
+
+        // Also watch for hash changes (some OAuth flows use hash parameters)
+        authWindow.webContents.on("did-navigate", (event, url) => {
+          if (url.includes("access_token")) {
+            authWindow.close()
+            resolve(true)
+          }
+        })
+
+        authWindow.on("closed", () => {
+          resolve(true)
+        })
+      })
     })
   }
 
@@ -786,7 +845,18 @@ async function initializeApp() {
 
   app.whenReady().then(() => {
     appState.createWindow()
+
     appState.setupGlobalShortcuts()
+
+    if (process.defaultApp) {
+      if (process.argv.length >= 2) {
+        app.setAsDefaultProtocolClient("myapp", process.execPath, [
+          path.resolve(process.argv[1])
+        ])
+      }
+    } else {
+      app.setAsDefaultProtocolClient("myapp")
+    }
 
     app.on("activate", () => {
       if (!appState.getMainWindow()) {

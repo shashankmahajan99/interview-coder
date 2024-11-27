@@ -1,5 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron"
 
+const path = require("path")
+
 // Types for the exposed Electron API
 interface ElectronAPI {
   updateContentHeight: (
@@ -29,6 +31,10 @@ interface ElectronAPI {
 
   onUnauthorized: (callback: () => void) => () => void
   takeScreenshot: () => Promise<void>
+  openAuthWindow: (url: string) => Promise<void>
+  storeSession: (session: any) => Promise<void>
+  getSession: () => Promise<any>
+  clearSession: () => Promise<void>
 }
 
 const PROCESSING_EVENTS = {
@@ -44,6 +50,13 @@ const PROCESSING_EVENTS = {
 
 // Expose the Electron API to the renderer process
 contextBridge.exposeInMainWorld("electronAPI", {
+  storeSession: (session: any) => ipcRenderer.invoke("store-session", session),
+  getSession: () => ipcRenderer.invoke("get-session"),
+  clearSession: () => ipcRenderer.invoke("clear-session"),
+
+  onAuthCallback: (callback: (url: string) => void) => {
+    ipcRenderer.on("auth-callback", (_, url) => callback(url))
+  },
   updateContentHeight: (height: number) =>
     ipcRenderer.invoke("update-content-height", height),
   takeScreenshot: () => ipcRenderer.invoke("take-screenshot"),
@@ -138,5 +151,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => {
       ipcRenderer.removeListener(PROCESSING_EVENTS.UNAUTHORIZED, subscription)
     }
-  }
+  },
+  openAuthWindow: (url: string) => ipcRenderer.invoke("open-auth-window", url)
 } as ElectronAPI)
