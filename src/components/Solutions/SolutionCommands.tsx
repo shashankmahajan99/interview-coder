@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef } from "react"
+import { supabase } from "../../lib/supabase"
+import { IoLogOutOutline } from "react-icons/io5"
 
-interface ExtraScreenshotsQueueHelperProps {
+interface SolutionCommandsProps {
   extraScreenshots: any[]
   onTooltipVisibilityChange?: (visible: boolean, height: number) => void
 }
 
-const ExtraScreenshotsQueueHelper: React.FC<
-  ExtraScreenshotsQueueHelperProps
-> = ({ extraScreenshots, onTooltipVisibilityChange }) => {
+const SolutionCommands: React.FC<SolutionCommandsProps> = ({
+  extraScreenshots,
+  onTooltipVisibilityChange
+}) => {
   const [isTooltipVisible, setIsTooltipVisible] = useState(false)
   const tooltipRef = useRef<HTMLDivElement>(null)
 
@@ -27,6 +30,10 @@ const ExtraScreenshotsQueueHelper: React.FC<
 
   const handleMouseLeave = () => {
     setIsTooltipVisible(false)
+  }
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
   }
 
   return (
@@ -88,7 +95,7 @@ const ExtraScreenshotsQueueHelper: React.FC<
               </button>
             </div>
           </div>
-          {/* Separator */}
+          {/* Separator before sign out */}
           <div className="mx-2 h-4 w-px bg-white/20" />
 
           {/* Question Mark with Tooltip */}
@@ -215,10 +222,22 @@ const ExtraScreenshotsQueueHelper: React.FC<
             )}
             {/* End of Tooltip Content */}
           </div>
+
+          {/* Separator */}
+          <div className="mx-2 h-4 w-px bg-white/20" />
+
+          {/* Sign Out Button - Moved to end */}
+          <button
+            onClick={handleSignOut}
+            className="text-red-500/70 hover:text-red-500/90  hover:cursor-pointer transition-colors"
+            title="Sign Out"
+          >
+            <IoLogOutOutline className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>
   )
 }
 
-export default ExtraScreenshotsQueueHelper
+export default SolutionCommands

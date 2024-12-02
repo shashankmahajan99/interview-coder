@@ -12,7 +12,7 @@ import {
   ToastTitle,
   ToastVariant
 } from "../components/ui/toast"
-import ExtraScreenshotsQueueHelper from "../components/Solutions/ExtraScreenshotsQueueHelper"
+import ExtraScreenshotsQueueHelper from "../components/Solutions/SolutionCommands"
 import { diffLines } from "diff"
 
 type DiffLine = {

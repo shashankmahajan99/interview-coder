@@ -13,7 +13,7 @@ import {
   ToastVariant
 } from "../components/ui/toast"
 import { ProblemStatementData } from "../types/solutions"
-import ExtraScreenshotsQueueHelper from "../components/Solutions/ExtraScreenshotsQueueHelper"
+import SolutionCommands from "../components/Solutions/SolutionCommands"
 import Debug from "./Debug"
 
 export const ContentSection = ({
@@ -398,7 +398,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
           )}
 
           {/* Navbar of commands with the SolutionsHelper */}
-          <ExtraScreenshotsQueueHelper
+          <SolutionCommands
             extraScreenshots={extraScreenshots}
             onTooltipVisibilityChange={handleTooltipVisibilityChange}
           />

@@ -8,7 +8,7 @@ import {
   ToastVariant,
   ToastMessage
 } from "../components/ui/toast"
-import QueueHelper from "../components/Queue/QueueHelper"
+import QueueCommands from "../components/Queue/QueueCommands"
 
 interface QueueProps {
   setView: React.Dispatch<React.SetStateAction<"queue" | "solutions" | "debug">>
@@ -62,7 +62,7 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
       )
 
       if (response.success) {
-        refetch() // Refetch screenshots instead of managing state directly
+        refetch()
       } else {
         console.error("Failed to delete screenshot:", response.error)
         showToast("Error", "Failed to delete the screenshot file", "error")
@@ -73,7 +73,6 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
   }
 
   useEffect(() => {
-    // Height update logic
     const updateDimensions = () => {
       if (contentRef.current) {
         let contentHeight = contentRef.current.scrollHeight
@@ -88,25 +87,22 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
       }
     }
 
-    // Initialize resize observer
     const resizeObserver = new ResizeObserver(updateDimensions)
     if (contentRef.current) {
       resizeObserver.observe(contentRef.current)
     }
     updateDimensions()
 
-    // Set up event listeners
     const cleanupFunctions = [
       window.electronAPI.onScreenshotTaken(() => refetch()),
       window.electronAPI.onResetView(() => refetch()),
-
       window.electronAPI.onSolutionError((error: string) => {
         showToast(
           "Processing Failed",
           "There was an error processing your screenshots.",
           "error"
         )
-        setView("queue") // Revert to queue if processing fails
+        setView("queue")
         console.error("Processing error:", error)
       }),
       window.electronAPI.onProcessingNoScreenshots(() => {
@@ -131,7 +127,7 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
 
   return (
     <div ref={contentRef} className={`bg-transparent w-1/2`}>
-      <div className="px-4 py-3 ">
+      <div className="px-4 py-3">
         <Toast
           open={toastOpen}
           onOpenChange={setToastOpen}
@@ -148,60 +144,10 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
             screenshots={screenshots}
             onDeleteScreenshot={handleDeleteScreenshot}
           />
-
-          <div className="pt-2 w-fit">
-            <div className="text-xs text-white/90 backdrop-blur-md bg-black/60 rounded-lg py-2 px-4 flex items-center justify-center gap-4">
-              {/* Show/Hide */}
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] leading-none">Show/Hide</span>
-                <div className="flex gap-1">
-                  <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
-                    ⌘
-                  </button>
-                  <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
-                    B
-                  </button>
-                </div>
-              </div>
-
-              {/* Screenshot */}
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] leading-none truncate">
-                  {screenshots.length === 0
-                    ? "Take first screenshot"
-                    : "Screenshot"}
-                </span>
-                <div className="flex gap-1">
-                  <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
-                    ⌘
-                  </button>
-                  <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
-                    H
-                  </button>
-                </div>
-              </div>
-
-              {/* Solve Command */}
-              {screenshots.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] leading-none">Solve</span>
-                  <div className="flex gap-1">
-                    <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
-                      ⌘
-                    </button>
-                    <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
-                      ↵
-                    </button>
-                  </div>
-                </div>
-              )}
-              <div className="mx-2 h-4 bg-white/20" />
-
-              <QueueHelper
-                onTooltipVisibilityChange={handleTooltipVisibilityChange}
-              />
-            </div>
-          </div>
+          <QueueCommands
+            screenshots={screenshots}
+            onTooltipVisibilityChange={handleTooltipVisibilityChange}
+          />
         </div>
       </div>
     </div>

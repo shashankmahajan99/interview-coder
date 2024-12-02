@@ -4,7 +4,10 @@ import { ToastViewport } from "@radix-ui/react-toast"
 import { useEffect, useRef, useState } from "react"
 import Solutions from "./_pages/Solutions"
 import { QueryClient, QueryClientProvider } from "react-query"
-import Debug from "./_pages/Debug"
+import { supabase } from "./lib/supabase"
+import Auth from "./components/Auth"
+import { User } from "@supabase/supabase-js"
+import UserProfile from "./components/UserProfile"
 
 declare global {
   interface Window {
@@ -54,7 +57,24 @@ const queryClient = new QueryClient({
 
 const App: React.FC = () => {
   const [view, setView] = useState<"queue" | "solutions" | "debug">("queue")
+  const [user, setUser] = useState<User | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+    })
+
+    // Listen for changes on auth state (sign in, sign out, etc.)
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   // Effect for height monitoring
 
@@ -144,6 +164,10 @@ const App: React.FC = () => {
     ]
     return () => cleanupFunctions.forEach((cleanup) => cleanup())
   }, [])
+
+  if (!user) {
+    return <Auth />
+  }
 
   return (
     <div ref={containerRef} className="min-h-0">
