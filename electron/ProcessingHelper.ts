@@ -184,7 +184,7 @@ export class ProcessingHelper {
         if (!isDevTest) {
           // First API call - extract problem
           problemResponse = await axios.post(
-            `${baseUrl}/extract_problem`,
+            `${baseUrl}/extract_problem_temp`,
             formData,
             {
               headers: {
@@ -338,7 +338,7 @@ export class ProcessingHelper {
 
         if (!isDevTest) {
           response = await axios.post(
-            `${baseUrl}/generate_solutions`,
+            `${baseUrl}/generate_solutions_temp`,
             { problem_info: problemInfo },
             {
               timeout: 300000,
@@ -440,15 +440,19 @@ export class ProcessingHelper {
         let response
 
         if (!isDevTest) {
-          response = await axios.post(`${baseUrl}/debug_solutions`, formData, {
-            headers: {
-              ...formData.getHeaders()
-            },
-            timeout: 300000,
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
-            signal
-          })
+          response = await axios.post(
+            `${baseUrl}/debug_solutions_temp`,
+            formData,
+            {
+              headers: {
+                ...formData.getHeaders()
+              },
+              timeout: 300000,
+              maxContentLength: Infinity,
+              maxBodyLength: Infinity,
+              signal
+            }
+          )
         } else {
           // Simulate API delay
           console.log(
