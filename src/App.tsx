@@ -8,6 +8,7 @@ import { supabase } from "./lib/supabase"
 import Auth from "./components/Auth"
 import { User } from "@supabase/supabase-js"
 import UserProfile from "./components/UserProfile"
+import PaymentGate from "./components/PaymentGate"
 
 declare global {
   interface Window {
@@ -58,6 +59,7 @@ const queryClient = new QueryClient({
 const App: React.FC = () => {
   const [view, setView] = useState<"queue" | "solutions" | "debug">("queue")
   const [user, setUser] = useState<User | null>(null)
+  const [hasPaid, setHasPaid] = useState<boolean>(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -75,6 +77,29 @@ const App: React.FC = () => {
 
     return () => subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    const checkPaymentStatus = async () => {
+      if (!user?.email) return
+
+      const { data, error } = await supabase
+        .from("emails")
+        .select("haspaid")
+        .eq("email", user.email)
+        .single()
+
+      if (error) {
+        console.error("Error checking payment status:", error)
+        return
+      }
+
+      setHasPaid(data?.haspaid ?? false)
+    }
+
+    if (user) {
+      checkPaymentStatus()
+    }
+  }, [user])
 
   // Effect for height monitoring
 
@@ -167,6 +192,10 @@ const App: React.FC = () => {
 
   if (!user) {
     return <Auth />
+  }
+
+  if (!hasPaid) {
+    return <PaymentGate user={user} />
   }
 
   return (
