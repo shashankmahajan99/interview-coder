@@ -1,5 +1,3 @@
-// electron/WindowHelper.ts
-
 import { BrowserWindow, screen, app } from "electron"
 import { AppState } from "main"
 import path from "node:path"
