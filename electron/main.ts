@@ -6,6 +6,48 @@ import { ShortcutsHelper } from "./shortcuts"
 import { ProcessingHelper } from "./ProcessingHelper"
 import { autoUpdater } from "electron-updater"
 import { initAutoUpdater } from "./autoUpdater"
+import fs from "fs"
+import path from "path"
+import { initialize } from '@electron/remote/main'
+
+initialize()
+
+async function initializeLogging() {
+  try {
+    const userDataPath = app.getPath("userData")
+    const logPath = path.join(userDataPath, "logs")
+    
+    // Ensure the logs directory exists
+    if (!fs.existsSync(logPath)) {
+      fs.mkdirSync(logPath, { recursive: true })
+    }
+    
+    // Test write permissions
+    const testFile = path.join(logPath, "test.txt")
+    fs.writeFileSync(testFile, "test")
+    fs.unlinkSync(testFile)
+    
+    return path.join(logPath, "app.log")
+  } catch (error) {
+    console.error('Failed to initialize logging:', error)
+    // Fallback to temp directory if userData is not accessible
+    const tempPath = path.join(app.getPath("temp"), "app-logs")
+    fs.mkdirSync(tempPath, { recursive: true })
+    return path.join(tempPath, "app.log")
+  }
+}
+
+// Define the log function
+function log(message: string): void {
+  try {
+    const timestamp = new Date().toISOString()
+    fs.appendFileSync(logFile, `[${timestamp}] ${message}\n`)
+  } catch (error) {
+    console.error('Failed to write to log file:', error)
+  }
+}
+
+let logFile: string; // Declare logFile at module scope
 
 export class AppState {
   private static instance: AppState | null = null
@@ -185,41 +227,86 @@ export class AppState {
 
 // Application initialization
 async function initializeApp() {
-  const appState = AppState.getInstance()
+    try {
+        logFile = await initializeLogging()
+        log("Logging initialized")
+        log(`App version: ${app.getVersion()}`)
+        log(`App path: ${app.getAppPath()}`)
+        log(`User data path: ${app.getPath('userData')}`)
+        log(`Executable path: ${app.getPath('exe')}`)
+        log(`Current working directory: ${process.cwd()}`)
+        
+        const appState = AppState.getInstance()
+        log("AppState instance created")
+        
+        log("Initializing IPC handlers")
+        initializeIpcHandlers(appState)
+        
+        app.whenReady().then(() => {
+            log("App is ready")
+            log(`Platform: ${process.platform}`)
+            log(`__dirname: ${__dirname}`)
+            log(`Environment: isPackaged=${app.isPackaged}, isDev=${process.env.NODE_ENV === "development"}`)
+            
+            try {
+                log("Creating main window...")
+                appState.createWindow()
+                log("Window creation initiated")
+                
+                // Register global shortcuts using ShortcutsHelper
+                log("Registering global shortcuts...")
+                appState.shortcutsHelper.registerGlobalShortcuts()
+                log("Global shortcuts registered successfully")
+                
+                // Initialize auto-updater in production
+                if (app.isPackaged) {
+                    log("Initializing auto-updater")
+                    initAutoUpdater()
+                } else {
+                    log("Running in development mode - auto-updater disabled")
+                }
+            } catch (error) {
+                log(`Error in app.whenReady handler: ${error}. Stack: ${error.stack}`)
+                console.error("Error in app.whenReady handler:", error)
+            }
+        })
 
-  // Initialize IPC handlers before window creation
-  initializeIpcHandlers(appState)
+        app.on("activate", () => {
+            log("App activated")
+            if (appState.getMainWindow() === null) {
+                log("No main window found, creating new one")
+                appState.createWindow()
+                log("Main window recreated on activate")
+            } else {
+                log("Main window already exists")
+            }
+        })
 
-  app.whenReady().then(() => {
-    console.log("App is ready")
-    appState.createWindow()
-    // Register global shortcuts using ShortcutsHelper
-    appState.shortcutsHelper.registerGlobalShortcuts()
+        app.on("window-all-closed", () => {
+            log("All windows closed event triggered")
+            if (process.platform !== "darwin") {
+                log("Platform is not macOS, quitting app")
+                app.quit()
+            }
+        })
 
-    // Initialize auto-updater in production
-    if (app.isPackaged) {
-      initAutoUpdater()
-    } else {
-      console.log("Running in development mode - auto-updater disabled")
+        app.on("will-quit", () => {
+            log("App will quit - cleaning up...")
+        })
+
+        if (process.platform === "darwin") {
+            log("Hiding dock icon on macOS")
+            app.dock?.hide()
+        }
+        
+        app.commandLine.appendSwitch("disable-background-timer-throttling")
+        log("Background timer throttling disabled")
+        
+        log("Application initialization complete")
+    } catch (error) {
+        log(`Error in initializeApp: ${error}. Stack: ${error.stack}`)
+        console.error("Error in initializeApp:", error)
     }
-  })
-
-  app.on("activate", () => {
-    console.log("App activated")
-    if (appState.getMainWindow() === null) {
-      appState.createWindow()
-    }
-  })
-
-  // Quit when all windows are closed, except on macOS
-  app.on("window-all-closed", () => {
-    if (process.platform !== "darwin") {
-      app.quit()
-    }
-  })
-
-  app.dock?.hide() // Hide dock icon (optional)
-  app.commandLine.appendSwitch("disable-background-timer-throttling")
 }
 
 // Start the application

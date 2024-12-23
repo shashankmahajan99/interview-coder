@@ -1,5 +1,14 @@
 import { globalShortcut, app } from "electron"
 import { AppState } from "./main" // Adjust the import path if necessary
+import fs from "fs"
+import path from "path"
+
+const logFile = path.join(app.getPath("userData"), "app.log")
+
+function log(message: string): void {
+  const timestamp = new Date().toISOString()
+  fs.appendFileSync(logFile, `[${timestamp}] ${message}\n`)
+}
 
 export class ShortcutsHelper {
   private appState: AppState
@@ -9,7 +18,10 @@ export class ShortcutsHelper {
   }
 
   public registerGlobalShortcuts(): void {
+    log("Registering global shortcuts")
+    
     globalShortcut.register("CommandOrControl+H", async () => {
+      log('Shortcut "CommandOrControl+H" triggered')
       const mainWindow = this.appState.getMainWindow()
       if (mainWindow) {
         console.log("Taking screenshot...")
@@ -22,15 +34,17 @@ export class ShortcutsHelper {
           })
         } catch (error) {
           console.error("Error capturing screenshot:", error)
-        }
+        } 
       }
     })
 
     globalShortcut.register("CommandOrControl+Enter", async () => {
+      log('Shortcut "CommandOrControl+Enter" triggered')
       await this.appState.processingHelper.processScreenshots()
     })
 
     globalShortcut.register("CommandOrControl+R", () => {
+      log('Shortcut "CommandOrControl+R" triggered')
       console.log(
         "Command + R pressed. Canceling requests and resetting queues..."
       )
@@ -55,24 +69,29 @@ export class ShortcutsHelper {
 
     // New shortcuts for moving the window
     globalShortcut.register("CommandOrControl+Left", () => {
+      log('Shortcut "CommandOrControl+Left" triggered')
       console.log("Command/Ctrl + Left pressed. Moving window left.")
       this.appState.moveWindowLeft()
     })
 
     globalShortcut.register("CommandOrControl+Right", () => {
+      log('Shortcut "CommandOrControl+Right" triggered')
       console.log("Command/Ctrl + Right pressed. Moving window right.")
       this.appState.moveWindowRight()
     })
     globalShortcut.register("CommandOrControl+Down", () => {
+      log('Shortcut "CommandOrControl+Down" triggered')
       console.log("Command/Ctrl + down pressed. Moving window down.")
       this.appState.moveWindowDown()
     })
     globalShortcut.register("CommandOrControl+Up", () => {
+      log('Shortcut "CommandOrControl+Up" triggered')
       console.log("Command/Ctrl + Up pressed. Moving window Up.")
       this.appState.moveWindowUp()
     })
 
     globalShortcut.register("CommandOrControl+B", () => {
+      log('Shortcut "CommandOrControl+B" triggered')
       this.appState.toggleMainWindow()
       // If window exists and we're showing it, bring it to front
       const mainWindow = this.appState.getMainWindow()
@@ -92,7 +111,10 @@ export class ShortcutsHelper {
 
     // Unregister shortcuts when quitting
     app.on("will-quit", () => {
+      log("Unregistering all global shortcuts")
       globalShortcut.unregisterAll()
     })
+
+    log("Global shortcuts registration complete")
   }
 }

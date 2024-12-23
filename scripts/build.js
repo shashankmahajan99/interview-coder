@@ -23,7 +23,7 @@ try {
 
   // Run the build command with notarization settings
   execSync(
-    "npm run clean && cross-env NODE_ENV=production tsc && vite build && electron-builder --mac",
+    "npm run clean && cross-env NODE_ENV=production tsc && vite build && electron-builder --win",
     {
       stdio: "inherit",
       env: {

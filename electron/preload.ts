@@ -1,5 +1,15 @@
 import { contextBridge, ipcRenderer } from "electron"
 const { shell } = require("electron")
+import fs from "fs"
+import path from "path"
+import { app } from "@electron/remote"
+
+const logFile = path.join(app.getPath("userData"), "preload.log")
+
+function log(message: string): void {
+  const timestamp = new Date().toISOString()
+  fs.appendFileSync(logFile, `[${timestamp}] ${message}\n`)
+}
 
 // Types for the exposed Electron API
 interface ElectronAPI {
@@ -56,11 +66,14 @@ export const PROCESSING_EVENTS = {
   DEBUG_ERROR: "debug-error"
 } as const
 
-// Expose the Electron API to the renderer process
+// Expose the Electron API to the renderer process with logging
 contextBridge.exposeInMainWorld("electronAPI", {
   updateContentDimensions: (dimensions: { width: number; height: number }) =>
     ipcRenderer.invoke("update-content-dimensions", dimensions),
-  takeScreenshot: () => ipcRenderer.invoke("take-screenshot"),
+  takeScreenshot: () => {
+    log("takeScreenshot invoked from renderer")
+    return ipcRenderer.invoke("take-screenshot")
+  },
   getScreenshots: () => ipcRenderer.invoke("get-screenshots"),
   deleteScreenshot: (path: string) =>
     ipcRenderer.invoke("delete-screenshot", path),
@@ -175,19 +188,29 @@ contextBridge.exposeInMainWorld("electronAPI", {
       )
     }
   },
-  moveWindowLeft: () => ipcRenderer.invoke("move-window-left"),
-  moveWindowRight: () => ipcRenderer.invoke("move-window-right"),
+  moveWindowLeft: () => {
+    log("moveWindowLeft invoked from renderer")
+    return ipcRenderer.invoke("move-window-left")
+  },
+  moveWindowRight: () => {
+    log("moveWindowRight invoked from renderer")
+    return ipcRenderer.invoke("move-window-right")
+  },
   updateApiKey: (apiKey: string) =>
     ipcRenderer.invoke("update-api-key", apiKey),
   setApiKey: (apiKey: string) => ipcRenderer.invoke("set-api-key", apiKey),
   openExternal: (url: string) => shell.openExternal(url)
 } as ElectronAPI)
 
-// Add this focus restoration handler
+// Add this focus restoration handler with logging
 ipcRenderer.on("restore-focus", () => {
+  log("restore-focus event received")
   // Try to focus the active element if it exists
   const activeElement = document.activeElement as HTMLElement
   if (activeElement && typeof activeElement.focus === "function") {
     activeElement.focus()
+    log("Active element focused")
+  } else {
+    log("No active element to focus")
   }
 })
