@@ -42,33 +42,49 @@ export class WindowHelper {
   public setWindowDimensions(width: number, height: number): void {
     if (!this.mainWindow || this.mainWindow.isDestroyed()) return
 
+    log(`setWindowDimensions called with width: ${width}, height: ${height}`)
+    
     // Get current window position
     const [currentX, currentY] = this.mainWindow.getPosition()
+    log(`Current window position: x=${currentX}, y=${currentY}`)
 
     // Get screen dimensions
     const primaryDisplay = screen.getPrimaryDisplay()
     const workArea = primaryDisplay.workAreaSize
+    log(`Screen work area: ${JSON.stringify(workArea)}`)
 
     // Use 75% width if debugging has occurred, otherwise use 60%
     const maxAllowedWidth = Math.floor(
       workArea.width * (this.appState.getHasDebugged() ? 0.75 : 0.4)
     )
+    log(`Max allowed width: ${maxAllowedWidth}`)
 
     // Ensure width doesn't exceed max allowed width and height is reasonable
     const newWidth = Math.min(width + 32, maxAllowedWidth)
-    const newHeight = Math.ceil(height)
+    const newHeight = Math.max(Math.ceil(height), 100) // Ensure minimum height
+    log(`Calculated dimensions - width: ${newWidth}, height: ${newHeight}`)
 
     // Center the window horizontally if it would go off screen
     const maxX = workArea.width - newWidth
     const newX = Math.min(Math.max(currentX, 0), maxX)
 
-    // Update window bounds
-    this.mainWindow.setBounds({
+    const bounds = {
       x: newX,
       y: currentY,
       width: newWidth,
       height: newHeight
-    })
+    }
+    log(`Setting window bounds: ${JSON.stringify(bounds)}`)
+    
+    this.mainWindow.setBounds(bounds)
+
+    // Verify the bounds were set correctly
+    const actualBounds = this.mainWindow.getBounds()
+    log(`Actual window bounds after setting: ${JSON.stringify(actualBounds)}`)
+
+    // Get content bounds for comparison
+    const contentBounds = this.mainWindow.getContentBounds()
+    log(`Content bounds: ${JSON.stringify(contentBounds)}`)
 
     // Update internal state
     this.windowPosition = { x: newX, y: currentY }
@@ -124,8 +140,8 @@ export class WindowHelper {
 
     const windowSettings: Electron.BrowserWindowConstructorOptions = {
         height: 600,
-        minWidth: undefined,
-        maxWidth: undefined,
+        minWidth: 400, // Add minimum width
+        minHeight: 300, // Add minimum height
         x: this.currentX,
         y: 0,
         webPreferences: {
@@ -140,7 +156,8 @@ export class WindowHelper {
         hasShadow: false,
         backgroundColor: process.platform === "darwin" ? "#00000000" : "#ffffff",
         focusable: true,
-        alwaysOnTop: true
+        alwaysOnTop: true,
+        resizable: process.platform === "darwin" ? false : true // Only allow resizing on Windows
     }
 
     log(`Creating window with settings: ${JSON.stringify(windowSettings, null, 2)}`)
@@ -221,6 +238,32 @@ export class WindowHelper {
         this.isWindowVisible = true
         log("Main window setup complete and visible")
 
+        this.mainWindow.webContents.on('did-start-loading', () => {
+            log('WebContents started loading')
+        })
+
+        this.mainWindow.webContents.on('did-stop-loading', () => {
+            log('WebContents stopped loading')
+        })
+
+        this.mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+            log(`Failed to load: ${errorDescription} (${errorCode}) at ${validatedURL}. isMainFrame: ${isMainFrame}`)
+        })
+
+        this.mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+            log(`Console ${level}: ${message} (${sourceId}:${line})`)
+        })
+
+        this.mainWindow.webContents.on('render-process-gone', (event, details) => {
+            log(`Render process gone: ${JSON.stringify(details)}`)
+        })
+
+        // Enable remote debugging
+        if (process.platform === 'win32') {
+            this.mainWindow.webContents.openDevTools()
+            log('DevTools opened for debugging')
+        }
+
     } catch (error) {
         log(`Error creating window: ${error}. Stack: ${error.stack}`)
         console.error("Error creating window:", error)
@@ -230,11 +273,15 @@ export class WindowHelper {
   private logWindowState(): void {
     if (!this.mainWindow) return
     
+    const contentBounds = this.mainWindow.getContentBounds()
+    const normalBounds = this.mainWindow.getNormalBounds()
     const state = {
         isVisible: this.mainWindow.isVisible(),
         isMinimized: this.mainWindow.isMinimized(),
         isFocused: this.mainWindow.isFocused(),
         bounds: this.mainWindow.getBounds(),
+        contentBounds,
+        normalBounds,
         isDestroyed: this.mainWindow.isDestroyed(),
         isAlwaysOnTop: this.mainWindow.isAlwaysOnTop(),
         webContentsId: this.mainWindow.webContents.id,

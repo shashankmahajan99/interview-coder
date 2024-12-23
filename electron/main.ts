@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron"
+import { app, BrowserWindow, globalShortcut } from "electron"
 import { initializeIpcHandlers } from "./ipcHandlers"
 import { WindowHelper } from "./WindowHelper"
 import { ScreenshotHelper } from "./ScreenshotHelper"
@@ -8,7 +8,7 @@ import { autoUpdater } from "electron-updater"
 import { initAutoUpdater } from "./autoUpdater"
 import fs from "fs"
 import path from "path"
-import { initialize } from '@electron/remote/main'
+import { initialize, enable } from '@electron/remote/main'
 
 initialize()
 
@@ -265,6 +265,8 @@ async function initializeApp() {
                 } else {
                     log("Running in development mode - auto-updater disabled")
                 }
+
+                enable(appState.getMainWindow().webContents)
             } catch (error) {
                 log(`Error in app.whenReady handler: ${error}. Stack: ${error.stack}`)
                 console.error("Error in app.whenReady handler:", error)
