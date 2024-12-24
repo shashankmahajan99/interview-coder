@@ -133,13 +133,13 @@ export class WindowHelper {
     this.screenWidth = workArea.width
     this.screenHeight = workArea.height
 
-    this.step = Math.floor(this.screenWidth / 10) // 10 steps
-    this.currentX = 0 // Start at the left
+    this.step = Math.floor(this.screenWidth / 10)
+    this.currentX = 0
 
     const windowSettings: Electron.BrowserWindowConstructorOptions = {
         height: 600,
-        minWidth: 400, // Add minimum width
-        minHeight: 300, // Add minimum height
+        minWidth: 400,  
+        minHeight: 300,
         x: this.currentX,
         y: 0,
         webPreferences: {
@@ -149,13 +149,13 @@ export class WindowHelper {
         },
         show: true,
         frame: false,
-        transparent: process.platform === "darwin",
+        transparent: true,
         fullscreenable: false,
         hasShadow: false,
         backgroundColor: process.platform === "darwin" ? "#00000000" : "#ffffff",
         focusable: true,
         alwaysOnTop: true,
-        resizable: process.platform === "darwin" ? false : true // Only allow resizing on Windows
+        resizable: true
     }
 
     log(`Creating window with settings: ${JSON.stringify(windowSettings, null, 2)}`)
