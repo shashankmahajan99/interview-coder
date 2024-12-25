@@ -7,7 +7,8 @@ import dotenv from "dotenv"
 import {
   debugSolutionResponses,
   extractProblemInfo,
-  generateSolutionResponses
+  generateSolutionResponses,
+  processTextQuery
 } from "./handlers/problemHandler"
 import axios from "axios"
 
@@ -27,6 +28,42 @@ export class ProcessingHelper {
     this.appState = appState
     this.screenshotHelper = appState.getScreenshotHelper()
   }
+  public async processQuery(): Promise<void> {
+    const mainWindow = this.appState.getMainWindow()
+    if (!mainWindow) return
+
+    const mode = this.appState.getMode()
+
+    if (mode === "text") {
+      const query = this.appState.getTextQuery()
+      if (!query) {
+        mainWindow.webContents.send(
+          this.appState.PROCESSING_EVENTS.NO_QUERY
+        )
+        return
+      }
+
+      mainWindow.webContents.send(this.appState.PROCESSING_EVENTS.INITIAL_START)
+      this.appState.setView("solutions")
+
+      try {
+        const result = await processTextQuery(query)
+        mainWindow.webContents.send(
+          this.appState.PROCESSING_EVENTS.SOLUTION_SUCCESS,
+          result
+        )
+      } catch (error: any) {
+        mainWindow.webContents.send(
+          this.appState.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR,
+          error.message
+        )
+      }
+    } else {
+      // Existing screenshot processing logic
+      await this.processScreenshots()
+    }
+  }
+
   public async processScreenshots(): Promise<void> {
     const mainWindow = this.appState.getMainWindow()
     if (!mainWindow) return

@@ -18,6 +18,16 @@ export function initializeIpcHandlers(appState: AppState): void {
     return appState.deleteScreenshot(path)
   })
 
+  ipcMain.handle("set-text-query", async (event, query: string) => {
+    try{
+      await appState.setTextQuery(query)
+      return { success: true }
+    } catch (error) {
+      console.error("Error setting text query:", error)
+      return { success: false, error: "Failed to set text query" }
+    }
+  })
+
   ipcMain.handle("take-screenshot", async () => {
     try {
       const screenshotPath = await appState.takeScreenshot()

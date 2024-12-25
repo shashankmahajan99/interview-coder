@@ -33,6 +33,8 @@ declare global {
       onProcessingNoScreenshots: (callback: () => void) => () => void
       onResetView: (callback: () => void) => () => void
       takeScreenshot: () => Promise<void>
+      onModeChanged: (callback: (mode: "screenshot" | "text") => void) => () => void
+      setTextQuery: (query: string) => Promise<void>
 
       //INITIAL SOLUTION EVENTS
       deleteScreenshot: (

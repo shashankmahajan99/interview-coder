@@ -92,7 +92,7 @@ export class WindowHelper {
 
   private enableDevTools(): void {
     if (!isDev && process.platform === "win32" && this.mainWindow) {
-      this.mainWindow.webContents.openDevTools()
+      // this.mainWindow.webContents.openDevTools()
       this.logDebugInfo()
     }
   }
@@ -114,6 +114,34 @@ export class WindowHelper {
     })
   }
   
+  
+  private setupSecurityLayer(): void {
+    if (!this.mainWindow || this.mainWindow.isDestroyed()) return;
+    
+    log("Setting up security layer");
+    
+    // Set window type to prevent it from being captured
+    if (process.platform === "darwin") {
+      // Set proper window level that's excluded from screen capture
+      this.mainWindow.setWindowButtonVisibility(false);
+      this.mainWindow.setAlwaysOnTop(true, "screen-saver", 1);
+      
+      // Use proper window type on macOS
+      this.mainWindow.setVisibleOnAllWorkspaces(true, {
+        visibleOnFullScreen: true
+      });
+    } else {
+      this.mainWindow.setAlwaysOnTop(true, "screen-saver");
+    }
+
+    // Ensure content protection is always on
+    this.mainWindow.setContentProtection(true);
+    
+    // Additional security settings
+    this.mainWindow.setSkipTaskbar(true);
+    this.mainWindow.setResizable(false);
+    this.mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  }
 
   public createWindow(): void {
     log("Creating main window")
@@ -155,7 +183,9 @@ export class WindowHelper {
         backgroundColor: process.platform === "darwin" ? "#00000000" : "#ffffff",
         focusable: true,
         alwaysOnTop: true,
-        resizable: true
+        resizable: true,
+        type: process.platform === "darwin" ? "panel" : "toolbar",
+        skipTaskbar: true,
     }
 
     log(`Creating window with settings: ${JSON.stringify(windowSettings, null, 2)}`)
@@ -164,9 +194,9 @@ export class WindowHelper {
     try {
         this.mainWindow = new BrowserWindow(windowSettings)
         log("BrowserWindow instance created successfully")
-
+        this.setupSecurityLayer();
         // Add error listener for window creation
-        this.mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+        this.mainWindow.webContents.on('did-fail-load', (event: any, errorCode: any, errorDescription: any) => {
             log(`Failed to load window content: ${errorDescription} (${errorCode})`)
         })
 
@@ -179,13 +209,29 @@ export class WindowHelper {
             log('DOM is ready')
         })
 
-        this.mainWindow.webContents.on('crashed', (event) => {
+        this.mainWindow.webContents.on('crashed', (event: any) => {
             log('Window content crashed')
         })
 
         this.mainWindow.on('unresponsive', () => {
             log('Window became unresponsive')
         })
+
+        // Add security-specific event listeners
+      this.mainWindow.on('show', () => {
+        log("Window show event - reinforcing security");
+        this.setupSecurityLayer();
+      });
+
+      this.mainWindow.on('focus', () => {
+        log("Window focus event - reinforcing security");
+        this.setupSecurityLayer();
+      });
+
+      this.mainWindow.webContents.on('did-finish-load', () => {
+        log("Content loaded - reinforcing security");
+        this.setupSecurityLayer();
+      });
 
         log("Setting up window properties...")
         this.mainWindow.setContentProtection(true)
@@ -216,7 +262,7 @@ export class WindowHelper {
                 log("Checking window state 1000ms after load")
                 this.logWindowState()
             }, 1000)
-        }).catch((err) => {
+        }).catch((err: { stack: any }) => {
             log(`Failed to load URL: ${err}. Stack: ${err.stack}`)
             console.error("Failed to load URL:", err, {
                 platform: process.platform,
@@ -244,21 +290,21 @@ export class WindowHelper {
             log('WebContents stopped loading')
         })
 
-        this.mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+        this.mainWindow.webContents.on('did-fail-load', (event: any, errorCode: any, errorDescription: any, validatedURL: any, isMainFrame: any) => {
             log(`Failed to load: ${errorDescription} (${errorCode}) at ${validatedURL}. isMainFrame: ${isMainFrame}`)
         })
 
-        this.mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+        this.mainWindow.webContents.on('console-message', (event: any, level: any, message: any, line: any, sourceId: any) => {
             log(`Console ${level}: ${message} (${sourceId}:${line})`)
         })
 
-        this.mainWindow.webContents.on('render-process-gone', (event, details) => {
+        this.mainWindow.webContents.on('render-process-gone', (event: any, details: any) => {
             log(`Render process gone: ${JSON.stringify(details)}`)
         })
 
         // Enable remote debugging
         if (process.platform === 'win32') {
-            this.mainWindow.webContents.openDevTools()
+            // this.mainWindow.webContents.openDevTools()
             log('DevTools opened for debugging')
         }
 
@@ -328,7 +374,7 @@ export class WindowHelper {
     })
 
     // Add error listeners
-    this.mainWindow.webContents.on("render-process-gone", (event, details) => {
+    this.mainWindow.webContents.on("render-process-gone", (event: any, details: any) => {
         log(`Render process gone: ${JSON.stringify(details)}`)
     })
 
@@ -391,6 +437,9 @@ export class WindowHelper {
     this.windowPosition = { x: bounds.x, y: bounds.y }
     this.windowSize = { width: bounds.width, height: bounds.height }
     
+     // Ensure security settings are maintained while hiding
+     this.setupSecurityLayer();
+
     this.mainWindow.hide()
     log("Window hidden")
     
@@ -404,6 +453,8 @@ export class WindowHelper {
         log("Cannot show window - window does not exist or is destroyed")
         return
     }
+    // Ensure security before showing
+    this.setupSecurityLayer();
 
     this.logWindowState()
     log("Attempting to show window...")
@@ -427,8 +478,23 @@ export class WindowHelper {
         })
     }
 
+    // Use a more secure show mechanism
+    this.mainWindow.webContents.once('before-input-event', () => {
+      this.setupSecurityLayer();
+    });
+    
     this.mainWindow.showInactive()
     log("Window shown inactive")
+
+     // Reinforce security after showing
+     this.setupSecurityLayer();
+
+    // Maintain the correct window level
+    if (process.platform === "darwin") {
+      this.mainWindow.setAlwaysOnTop(true, "screen-saver", 1);
+    } else {
+      this.mainWindow.setAlwaysOnTop(true, "screen-saver");
+    }
 
     if (focusedWindow && !focusedWindow.isDestroyed()) {
         focusedWindow.focus()

@@ -59,6 +59,8 @@ export class AppState {
 
   // View management
   private view: "queue" | "solutions" = "queue"
+  private mode: "screenshot" | "text" = "screenshot"
+  private textQuery: string = ""
 
   private problemInfo: {
     problem_statement: string
@@ -76,6 +78,7 @@ export class AppState {
     UNAUTHORIZED: "procesing-unauthorized",
     NO_SCREENSHOTS: "processing-no-screenshots",
     API_KEY_OUT_OF_CREDITS: "processing-api-key-out-of-credits",
+    NO_QUERY: "processing-no-query",
 
     //states for generating the initial solution
     INITIAL_START: "initial-start",
@@ -222,6 +225,26 @@ export class AppState {
 
   public getHasDebugged(): boolean {
     return this.hasDebugged
+  }
+
+   public getMode(): "screenshot" | "text" {
+    return this.mode
+  }
+
+  public setMode(mode: "screenshot" | "text"): void {
+    this.mode = mode
+  }
+
+  public getTextQuery(): string {
+    return this.textQuery
+  }
+
+  public setTextQuery(query: string): void {
+    this.textQuery = query
+  }
+
+  public toggleMode(): void {
+    this.mode = this.mode === "screenshot" ? "text" : "screenshot"
   }
 }
 

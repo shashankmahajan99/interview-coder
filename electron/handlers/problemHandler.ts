@@ -43,6 +43,74 @@ interface StoreSchema {
   // add other store fields here
 }
 
+export async function processTextQuery(query: string): Promise<any> {
+  const storedApiKey = store.get("openaiApiKey")
+  if (!storedApiKey) {
+    throw new Error("OpenAI API key not set")
+  }
+
+  const messages = [
+    {
+      role: "user",
+      content: `Given this programming question/problem:
+${query}
+
+Please provide a solution in this format:
+{
+  "thoughts": [
+    "Initial analysis of the problem",
+    "Approach being considered",
+    "Implementation strategy"
+  ],
+  "solution": "Complete code solution with comments",
+  "explanation": "Step-by-step explanation of how the solution works",
+  "time_complexity": "Big O notation with explanation",
+  "space_complexity": "Big O notation with explanation"
+}
+
+Format Requirements:
+1. Use actual line breaks in code field
+2. Indent code properly with spaces
+3. Include clear code comments
+4. Response must be valid JSON
+5. Return only the JSON object with no markdown or other formatting
+6.The solution should be clear and educational, focused on helping someone understand the approach.
+`
+    }
+  ]
+
+  try {
+    const response = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        model: "gpt-4-turbo-preview",
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 2000
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${storedApiKey}`
+        }
+      }
+    )
+
+    const content = response.data.choices[0].message.content
+    try {
+      console.log("ContentJSON:", JSON.parse(content))
+    } catch {
+      console.log("Content:", content)
+    }
+    return content
+  } catch (error: any) {
+    if (error.response?.status === 429) {
+      throw new Error("API Key out of credits")
+    }
+    throw error
+  }
+}
+
 // Define the extractProblemInfo function
 export async function extractProblemInfo(
   imageDataList: string[]

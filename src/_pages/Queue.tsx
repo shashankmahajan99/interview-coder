@@ -14,6 +14,15 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
   const [isTooltipVisible, setIsTooltipVisible] = useState(false)
   const [tooltipHeight, setTooltipHeight] = useState(0)
   const contentRef = useRef<HTMLDivElement>(null)
+  const [mode, setMode] = useState<"screenshot" | "text">("screenshot")
+  const [textQuery, setTextQuery] = useState("")
+
+  useEffect(() => {
+    const cleanup = window.electronAPI.onModeChanged((newMode) => {
+      setMode(newMode)
+    })
+    return cleanup
+  }, [])
 
   const { data: screenshots = [], refetch } = useQuery({
     queryKey: ["screenshots"],
@@ -113,11 +122,25 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
     <div ref={contentRef} className={`bg-transparent w-1/2`}>
       <div className="px-4 py-3 ">
         <div className="space-y-3 w-fit">
-          <ScreenshotQueue
-            isLoading={false}
-            screenshots={screenshots}
-            onDeleteScreenshot={handleDeleteScreenshot}
-          />
+        {mode === "screenshot" ? (
+            <ScreenshotQueue
+              isLoading={false}
+              screenshots={screenshots}
+              onDeleteScreenshot={handleDeleteScreenshot}
+            />
+          ) : (
+            <div className="space-y-2">
+              <textarea
+                className="w-full h-32 p-2 text-sm text-gray-900 bg-white/90 backdrop-blur-md rounded-lg border border-gray-300"
+                placeholder="Enter your programming question here..."
+                value={textQuery}
+                onChange={(e) => {
+                  setTextQuery(e.target.value)
+                  window.electronAPI.setTextQuery(e.target.value)
+                }}
+              />
+            </div>
+          )} 
 
           <div className="pt-2 w-fit">
             <div className="text-xs text-white/90 backdrop-blur-md bg-black/60 rounded-lg py-2 px-4 flex items-center justify-center gap-4">
@@ -134,6 +157,41 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
                 </div>
               </div>
 
+              {/* Mode Toggle */}
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] leading-none">
+                  {mode === "screenshot" ? "Switch to Text" : "Switch to Screenshot"}
+                </span>
+                <div className="flex gap-1">
+                  <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                    ⌘
+                  </button>
+                  <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                    ⇧
+                  </button>
+                  <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                    T
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              {(mode === "screenshot" && screenshots.length > 0) || (mode === "text" && textQuery) ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] leading-none">
+                    {mode === "screenshot" ? "Solve" : "Get Answer"}
+                  </span>
+                  <div className="flex gap-1">
+                    <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                      ⌘
+                    </button>
+                    <button className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-1.5 py-1 text-[11px] leading-none text-white/70">
+                      ↵
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+              
               {/* Screenshot */}
               <div className="flex items-center gap-2">
                 <span className="text-[11px] leading-none truncate">

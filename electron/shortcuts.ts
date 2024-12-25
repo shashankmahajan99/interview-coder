@@ -40,7 +40,22 @@ export class ShortcutsHelper {
 
     globalShortcut.register("CommandOrControl+Enter", async () => {
       log('Shortcut "CommandOrControl+Enter" triggered')
-      await this.appState.processingHelper.processScreenshots()
+      const mode = this.appState.getMode()
+      
+      if (mode === "text") {
+        const query = this.appState.getTextQuery()
+        if (!query.trim()) {
+          const mainWindow = this.appState.getMainWindow()
+          if (mainWindow) {
+            mainWindow.webContents.send(
+              this.appState.PROCESSING_EVENTS.NO_QUERY
+            )
+          }
+          return
+        }
+      }
+      
+      await this.appState.processingHelper.processQuery()
     })
 
     globalShortcut.register("CommandOrControl+R", () => {
@@ -106,6 +121,16 @@ export class ShortcutsHelper {
             }
           }, 100)
         }
+      }
+    })
+
+    globalShortcut.register("CommandOrControl+Shift+T", () => {
+      log('Shortcut "CommandOrControl+Shift+T" triggered')
+      this.appState.toggleMode()
+      
+      const mainWindow = this.appState.getMainWindow()
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("mode-changed", this.appState.getMode())
       }
     })
 

@@ -74,6 +74,8 @@ try {
     updateApiKey: (apiKey: string) => Promise<void>
     setApiKey: (apiKey: string) => Promise<{ success: boolean }>
     openExternal: (url: string) => void
+    onModeChanged: (callback: (mode: "screenshot" | "text") => void) => () => void
+    setTextQuery: (query: string) => Promise<void>
   }
 
   // Before exposing the API
@@ -81,6 +83,15 @@ try {
 
   // Expose the Electron API to the renderer process with logging
   contextBridge.exposeInMainWorld("electronAPI", {
+    onModeChanged: (callback: (mode: "screenshot" | "text") => void) => {
+      const subscription = (_: any, mode: "screenshot" | "text") => callback(mode)
+      ipcRenderer.on("mode-changed", subscription)
+      return () => {
+        ipcRenderer.removeListener("mode-changed", subscription)
+      }
+    },
+    
+    setTextQuery: (query: string) => ipcRenderer.invoke("set-text-query", query),
     updateContentDimensions: (dimensions: { width: number; height: number }) => {
       log(`updateContentDimensions called with: ${JSON.stringify(dimensions)}`)
       return ipcRenderer.invoke("update-content-dimensions", dimensions)
