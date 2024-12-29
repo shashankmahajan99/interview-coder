@@ -11,6 +11,7 @@ import {
   processTextQuery
 } from "./handlers/problemHandler"
 import axios from "axios"
+import sharp from "sharp"
 
 dotenv.config()
 
@@ -86,12 +87,42 @@ export class ProcessingHelper {
       this.currentProcessingAbortController = new AbortController()
       const { signal } = this.currentProcessingAbortController
 
+      // function to compress the Image
+      function compressBase64Image(
+        base64: string,
+        maxWidth: number,
+        quality: number
+      ): Promise<string> {
+        return new Promise((resolve, reject) => {
+          // Convert Base64 to Buffer
+          const buffer = Buffer.from(base64, "base64")
+
+          // Use sharp to resize and compress the image
+          sharp(buffer)
+            .resize({ width: maxWidth }) // Resize image to max width while maintaining aspect ratio
+            .jpeg({ quality: Math.round(quality * 100) }) // Compress image with the specified quality
+            .toBuffer()
+            .then((compressedBuffer) => {
+              // Convert the compressed Buffer back to Base64
+              const compressedBase64 = compressedBuffer.toString("base64")
+              resolve(compressedBase64)
+            })
+            .catch((error) => {
+              reject(error)
+            })
+        })
+      }
+
       try {
         const screenshots = await Promise.all(
           screenshotQueue.map(async (path) => ({
             path,
             preview: await this.screenshotHelper.getImagePreview(path),
-            data: fs.readFileSync(path).toString("base64") // Read image data
+            data: await compressBase64Image(
+              fs.readFileSync(path).toString("base64"),
+              800,
+              0.7
+            ),
           }))
         )
 

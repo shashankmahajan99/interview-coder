@@ -55,14 +55,14 @@ export async function processTextQuery(query: string): Promise<any> {
       content: `Given this programming question/problem:
 ${query}
 
-Please provide a solution in this format:
+Please provide a solution in this format and adhere strictly to the format restrictions given below:
 {
   "thoughts": [
     "Initial analysis of the problem",
     "Approach being considered",
     "Implementation strategy"
   ],
-  "solution": "Complete code solution with comments",
+  "code": "Complete code solution with comments",
   "explanation": "Step-by-step explanation of how the solution works",
   "time_complexity": "Big O notation with explanation",
   "space_complexity": "Big O notation with explanation"
@@ -83,10 +83,9 @@ Format Requirements:
     const response = await axios.post(
       "https://api.openai.com/v1/chat/completions",
       {
-        model: "gpt-4-turbo-preview",
+        model: "gpt-4o-mini",
         messages: messages,
-        temperature: 0.7,
-        max_tokens: 2000
+        max_tokens: 4096
       },
       {
         headers: {
@@ -95,18 +94,22 @@ Format Requirements:
         }
       }
     )
-
-    const content = response.data.choices[0].message.content
+    console.log("Response:", response.data)
+    let content = response.data.choices[0].message.content
+    console.log("Content:", content)
     try {
-      console.log("ContentJSON:", JSON.parse(content))
-    } catch {
-      console.log("Content:", content)
+      return JSON.parse(content)
+    } catch (error) {
+      // If its an invalid json due to '''<language> string''' format then remove the '''<language> from the string and parse it again
+      content = content.replace(/'''[a-zA-Z]+/g, "")
     }
-    return content
+    console.log("Reparsed content:", content)
+    return JSON.parse(content)
   } catch (error: any) {
     if (error.response?.status === 429) {
       throw new Error("API Key out of credits")
     }
+    console.log("Error details:", error)
     throw error
   }
 }

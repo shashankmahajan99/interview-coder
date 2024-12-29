@@ -89,13 +89,6 @@ export class WindowHelper {
     this.windowSize = { width: newWidth, height: newHeight }
     this.currentX = newX
   }
-
-  private enableDevTools(): void {
-    if (!isDev && process.platform === "win32" && this.mainWindow) {
-      // this.mainWindow.webContents.openDevTools()
-      this.logDebugInfo()
-    }
-  }
   
   private logDebugInfo(): void {
     console.log('Window Debug Info:', {
@@ -146,8 +139,8 @@ export class WindowHelper {
   public createWindow(): void {
     log("Creating main window")
     if (this.mainWindow !== null) {
-        log("Main window already exists")
-        return
+      log("Main window already exists")
+      return
     }
 
     log(`Platform: ${process.platform}, isDev: ${isDev}`)
@@ -165,57 +158,57 @@ export class WindowHelper {
     this.currentX = 0
 
     const windowSettings: Electron.BrowserWindowConstructorOptions = {
-        height: 600,
-        minWidth: 400,  
-        minHeight: 300,
-        x: this.currentX,
-        y: 0,
-        webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: true,
-            preload: path.join(__dirname, "preload.js")
-        },
-        show: true,
-        frame: false,
-        transparent: true,
-        fullscreenable: false,
-        hasShadow: false,
-        backgroundColor: process.platform === "darwin" ? "#00000000" : "#ffffff",
-        focusable: true,
-        alwaysOnTop: true,
-        resizable: true,
-        type: process.platform === "darwin" ? "panel" : "toolbar",
-        skipTaskbar: true,
+      height: 600,
+      minWidth: 400,  
+      minHeight: 300,
+      x: this.currentX,
+      y: 0,
+      webPreferences: {
+          nodeIntegration: true,
+          contextIsolation: true,
+          preload: path.join(__dirname, "preload.js")
+      },
+      show: true,
+      frame: false,
+      transparent: true,
+      fullscreenable: false,
+      hasShadow: false,
+      backgroundColor: process.platform === "darwin" ? "#00000000" : "#ffffff",
+      focusable: true,
+      alwaysOnTop: true,
+      resizable: true,
+      type: process.platform === "darwin" ? "panel" : "toolbar",
+      skipTaskbar: true,
     }
 
     log(`Creating window with settings: ${JSON.stringify(windowSettings, null, 2)}`)
     log(`Preload script path: ${windowSettings.webPreferences?.preload}`)
 
     try {
-        this.mainWindow = new BrowserWindow(windowSettings)
-        log("BrowserWindow instance created successfully")
-        this.setupSecurityLayer();
-        // Add error listener for window creation
-        this.mainWindow.webContents.on('did-fail-load', (event: any, errorCode: any, errorDescription: any) => {
-            log(`Failed to load window content: ${errorDescription} (${errorCode})`)
-        })
+      this.mainWindow = new BrowserWindow(windowSettings)
+      log("BrowserWindow instance created successfully")
+      this.setupSecurityLayer();
+      // Add error listener for window creation
+      this.mainWindow.webContents.on('did-fail-load', (event: any, errorCode: any, errorDescription: any) => {
+          log(`Failed to load window content: ${errorDescription} (${errorCode})`)
+      })
 
-        // Add success listener
-        this.mainWindow.webContents.on('did-finish-load', () => {
-            log('Window content loaded successfully')
-        })
+      // Add success listener
+      this.mainWindow.webContents.on('did-finish-load', () => {
+          log('Window content loaded successfully')
+      })
 
-        this.mainWindow.webContents.on('dom-ready', () => {
-            log('DOM is ready')
-        })
+      this.mainWindow.webContents.on('dom-ready', () => {
+          log('DOM is ready')
+      })
 
-        this.mainWindow.webContents.on('crashed', (event: any) => {
-            log('Window content crashed')
-        })
+      this.mainWindow.webContents.on('crashed', (event: any) => {
+          log('Window content crashed')
+      })
 
-        this.mainWindow.on('unresponsive', () => {
-            log('Window became unresponsive')
-        })
+      this.mainWindow.on('unresponsive', () => {
+          log('Window became unresponsive')
+      })
 
         // Add security-specific event listeners
       this.mainWindow.on('show', () => {
@@ -233,81 +226,74 @@ export class WindowHelper {
         this.setupSecurityLayer();
       });
 
-        log("Setting up window properties...")
-        this.mainWindow.setContentProtection(true)
-        
-        if (process.platform === "darwin") {
-            log("Configuring macOS-specific settings")
-            this.mainWindow.setHiddenInMissionControl(true)
-            this.mainWindow.setVisibleOnAllWorkspaces(true, {
-                visibleOnFullScreen: true
-            })
-            this.mainWindow.setAlwaysOnTop(true, "floating")
-        } else if (process.platform === "win32") {
-            log("Configuring Windows-specific settings")
-            this.mainWindow.setAlwaysOnTop(true)
-        }
+      log("Setting up window properties...")
+      this.mainWindow.setContentProtection(true)
+      
+      if (process.platform === "darwin") {
+          log("Configuring macOS-specific settings")
+          this.mainWindow.setHiddenInMissionControl(true)
+          this.mainWindow.setVisibleOnAllWorkspaces(true, {
+              visibleOnFullScreen: true
+          })
+          this.mainWindow.setAlwaysOnTop(true, "floating")
+      } else if (process.platform === "win32") {
+          log("Configuring Windows-specific settings")
+          this.mainWindow.setAlwaysOnTop(true)
+      }
 
-        log("Attempting to load URL: " + startUrl)
-        this.mainWindow.loadURL(startUrl).then(() => {
-            log("URL loaded successfully")
-            // Add immediate state check after load
-            setTimeout(() => {
-                log("Checking window state 100ms after load")
-                this.logWindowState()
-            }, 100)
-            
-            // Add another check after a longer delay
-            setTimeout(() => {
-                log("Checking window state 1000ms after load")
-                this.logWindowState()
-            }, 1000)
-        }).catch((err: { stack: any }) => {
-            log(`Failed to load URL: ${err}. Stack: ${err.stack}`)
-            console.error("Failed to load URL:", err, {
-                platform: process.platform,
-                startUrl,
-                isDev
-            })
-        })
+      log("Attempting to load URL: " + startUrl)
+      this.mainWindow.loadURL(startUrl).then(() => {
+          log("URL loaded successfully")
+          // Add immediate state check after load
+          setTimeout(() => {
+              log("Checking window state 100ms after load")
+              this.logWindowState()
+          }, 100)
+          
+          // Add another check after a longer delay
+          setTimeout(() => {
+              log("Checking window state 1000ms after load")
+              this.logWindowState()
+          }, 1000)
+      }).catch((err: { stack: any }) => {
+          log(`Failed to load URL: ${err}. Stack: ${err.stack}`)
+          console.error("Failed to load URL:", err, {
+              platform: process.platform,
+              startUrl,
+              isDev
+          })
+      })
 
-        const bounds = this.mainWindow.getBounds()
-        log(`Initial window bounds: ${JSON.stringify(bounds)}`)
-        this.windowPosition = { x: bounds.x, y: bounds.y }
-        this.windowSize = { width: bounds.width, height: bounds.height }
-        this.currentX = bounds.x
-        this.currentY = bounds.y
+      const bounds = this.mainWindow.getBounds()
+      log(`Initial window bounds: ${JSON.stringify(bounds)}`)
+      this.windowPosition = { x: bounds.x, y: bounds.y }
+      this.windowSize = { width: bounds.width, height: bounds.height }
+      this.currentX = bounds.x
+      this.currentY = bounds.y
 
-        this.setupWindowListeners()
-        this.isWindowVisible = true
-        log("Main window setup complete and visible")
+      this.setupWindowListeners()
+      this.isWindowVisible = true
+      log("Main window setup complete and visible")
 
-        this.mainWindow.webContents.on('did-start-loading', () => {
-            log('WebContents started loading')
-        })
+      this.mainWindow.webContents.on('did-start-loading', () => {
+          log('WebContents started loading')
+      })
 
-        this.mainWindow.webContents.on('did-stop-loading', () => {
-            log('WebContents stopped loading')
-        })
+      this.mainWindow.webContents.on('did-stop-loading', () => {
+          log('WebContents stopped loading')
+      })
 
-        this.mainWindow.webContents.on('did-fail-load', (event: any, errorCode: any, errorDescription: any, validatedURL: any, isMainFrame: any) => {
-            log(`Failed to load: ${errorDescription} (${errorCode}) at ${validatedURL}. isMainFrame: ${isMainFrame}`)
-        })
+      this.mainWindow.webContents.on('did-fail-load', (event: any, errorCode: any, errorDescription: any, validatedURL: any, isMainFrame: any) => {
+          log(`Failed to load: ${errorDescription} (${errorCode}) at ${validatedURL}. isMainFrame: ${isMainFrame}`)
+      })
 
-        this.mainWindow.webContents.on('console-message', (event: any, level: any, message: any, line: any, sourceId: any) => {
-            log(`Console ${level}: ${message} (${sourceId}:${line})`)
-        })
+      this.mainWindow.webContents.on('console-message', (event: any, level: any, message: any, line: any, sourceId: any) => {
+          log(`Console ${level}: ${message} (${sourceId}:${line})`)
+      })
 
-        this.mainWindow.webContents.on('render-process-gone', (event: any, details: any) => {
-            log(`Render process gone: ${JSON.stringify(details)}`)
-        })
-
-        // Enable remote debugging
-        if (process.platform === 'win32') {
-            // this.mainWindow.webContents.openDevTools()
-            log('DevTools opened for debugging')
-        }
-
+      this.mainWindow.webContents.on('render-process-gone', (event: any, details: any) => {
+          log(`Render process gone: ${JSON.stringify(details)}`)
+      })
     } catch (error) {
         log(`Error creating window: ${error}. Stack: ${error.stack}`)
         console.error("Error creating window:", error)

@@ -250,6 +250,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
           space_complexity: data.space_complexity
         }
 
+        console.log("Setting solution data:", solutionData)
         queryClient.setQueryData(["solution"], solutionData)
         setSolutionData(solutionData.code || null)
         setThoughtsData(solutionData.thoughts || null)
